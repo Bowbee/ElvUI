@@ -19,6 +19,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Make Edits
+      run: node scripts/index.js
     - uses: actions/checkout@master
       with:
         fetch-depth: 0
