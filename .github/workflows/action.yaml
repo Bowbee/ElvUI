@@ -2,7 +2,7 @@ name: GitHub Actions Demo
 on:
   push:
     tags:
-      - *-veil
+      - '*-veil'
 jobs:
   build:
     runs-on: ubuntu-latest
