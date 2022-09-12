@@ -1,9 +1,21 @@
-name: Release Pusher
+name: Auto Tag
 on:
   push:
     tags:
-      - '*-veil'
+      - '*'
+      - '!*-veil'
 jobs:
+  tag_repo:
+    name: Get runner id and tag the current code snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Tag and push current repo code
+        run: |
+          git tag ${{env.RELEASE_VERSION}}-veil
+          git push origin ${{env.RELEASE_VERSION}}-veil
   build:
     runs-on: ubuntu-latest
     steps:
@@ -16,8 +28,11 @@ jobs:
         type: 'zip'
         filename: 'release.zip'
         exclusions: '*.git* /*node_modules/* .editorconfig'
+    - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
     - name: Upload Release
       uses: ncipollo/release-action@v1
       with:
         artifacts: "release.zip"
         token: ${{ secrets.GITHUB_TOKEN }}
+        tag: ${{env.RELEASE_VERSION}}-veil
