@@ -39,6 +39,7 @@ const colours = [
   "		local VeilOrange = function(t) return specialText(t, 0.99,0.33,0.0, 0.99,0.66,0.10) end",
   "		local VeilBlue = function(t) return specialText(t, 0.0,0.33,0.99, 0.10,0.66,0.99) end",
   "    local VeilPink = function(t) return specialText(t, 0.80,0.0,0.99, 0.60,0.0,0.99) end",
+  "    local VeilObi = function(t) return specialText(t, 0.0,0.33,0.99, 0.0,0.20,0.99) end",
 ];
 colours.forEach((func, index) => {
   addLineOfText(func, colorLineIndex + index + 1, 0);
@@ -51,6 +52,7 @@ const addFormatLines = [
   "		veilOrange = function() return Beer, VeilOrange end",
   "		veilBlue = function() return TyroneBiggums, VeilBlue end",
   "   veilPink = function() return Hibiscus, VeilPink end",
+  "   veilObi = function() return PalmTree, VeilObi end",
 ];
 addFormatLines.forEach((func, index) => {
   addLineOfText(func, formatLineIndex + index + 1, 0);
@@ -64,6 +66,9 @@ const characters = {
   "Demobalth-Frostmourne": "veilBlue",
   "Mogybear-Frostmourne": "veilBlue",
   "Meeooww-Frostmourne": "veilPink",
+  "Obimage-Frostmourne": "veilObi",
+  "Obidk-Frostmourne": "veilObi",
+  "Embattled-Frostmourne": "itsThradex",
   "TorxyPriest-Frostmourne": "itsThradex",
 }
 Object.keys(characters).forEach((key, index) => {
