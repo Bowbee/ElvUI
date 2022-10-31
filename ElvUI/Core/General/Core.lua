@@ -27,7 +27,7 @@ local GetBindingKey = GetBindingKey
 local SetBinding = SetBinding
 local SaveBindings = SaveBindings
 local GetCurrentBindingSet = GetCurrentBindingSet
-local GetSpecialization = (E.Classic or E.TBC or E.Wrath and LCS.GetSpecialization) or GetSpecialization
+local GetSpecialization = (E.Classic or E.Wrath and LCS.GetSpecialization) or GetSpecialization
 
 local ERR_NOT_IN_COMBAT = ERR_NOT_IN_COMBAT
 local LE_PARTY_CATEGORY_HOME = LE_PARTY_CATEGORY_HOME
@@ -154,7 +154,9 @@ E.UFParent = _G.ElvUFParent -- created in oUF
 E.UFParent:SetParent(E.UIParent)
 E.UFParent:SetFrameStrata('LOW')
 
-E.HiddenFrame = CreateFrame('Frame')
+E.HiddenFrame = CreateFrame('Frame', nil, _G.UIParent)
+E.HiddenFrame:SetPoint('BOTTOM')
+E.HiddenFrame:SetSize(1,1)
 E.HiddenFrame:Hide()
 
 do -- used in optionsUI
@@ -1522,8 +1524,6 @@ function E:UpdateMisc(skipCallback)
 		TotemTracker:PositionAndSize()
 	elseif E.Wrath then
 		ActionBars:PositionAndSizeTotemBar()
-	elseif E.TBC then
-		TotemTracker:PositionAndSize()
 	end
 
 	if not skipCallback then

@@ -377,8 +377,39 @@ function S:SkinTalentListButtons(frame)
 end
 
 do
-	local function borderVertex(border, r, g, b, a)
+	local quality = Enum.ItemQuality
+	local iconColors = {
+		['auctionhouse-itemicon-border-gray']		= E.QualityColors[quality.Poor],
+		['auctionhouse-itemicon-border-white']		= E.QualityColors[quality.Common],
+		['auctionhouse-itemicon-border-green']		= E.QualityColors[quality.Uncommon],
+		['auctionhouse-itemicon-border-blue']		= E.QualityColors[quality.Rare],
+		['auctionhouse-itemicon-border-purple']		= E.QualityColors[quality.Epic],
+		['auctionhouse-itemicon-border-orange']		= E.QualityColors[quality.Legendary],
+		['auctionhouse-itemicon-border-artifact']	= E.QualityColors[quality.Artifact],
+		['auctionhouse-itemicon-border-account']	= E.QualityColors[quality.Heirloom]
+	}
+
+	local function hideBorder(border)
+		border:SetAlpha(0)
 		border:StripTextures()
+	end
+
+	local function colorAtlas(border, atlas)
+		local color = iconColors[atlas]
+		if not color then return end
+
+		hideBorder(border)
+
+		if border.customFunc then
+			local br, bg, bb = unpack(E.media.bordercolor)
+			border.customFunc(border, color.r, color.g, color.b, 1, br, bg, bb)
+		elseif border.customBackdrop then
+			border.customBackdrop:SetBackdropBorderColor(color.r, color.g, color.b)
+		end
+	end
+
+	local function colorVertex(border, r, g, b, a)
+		hideBorder(border)
 
 		if border.customFunc then
 			local br, bg, bb = unpack(E.media.bordercolor)
@@ -413,9 +444,10 @@ do
 		border.customBackdrop = backdrop
 
 		if not border.IconBorderHooked then
-			border:StripTextures()
+			hideBorder(border)
 
-			hooksecurefunc(border, 'SetVertexColor', borderVertex)
+			hooksecurefunc(border, 'SetAtlas', colorAtlas)
+			hooksecurefunc(border, 'SetVertexColor', colorVertex)
 			hooksecurefunc(border, 'SetShown', borderShown)
 			hooksecurefunc(border, 'Hide', borderHide)
 
@@ -423,10 +455,13 @@ do
 		end
 
 		local r, g, b, a = border:GetVertexColor()
+		local atlas = iconColors[border.GetAtlas and border:GetAtlas()]
 		if customFunc then
 			border.customFunc = customFunc
 			local br, bg, bb = unpack(E.media.bordercolor)
 			customFunc(border, r, g, b, a, br, bg, bb)
+		elseif atlas then
+			backdrop:SetBackdropBorderColor(atlas.r, atlas.g, atlas.b, 1)
 		elseif r then
 			backdrop:SetBackdropBorderColor(r, g, b, a)
 		else
@@ -1166,7 +1201,7 @@ function S:HandleSliderFrame(frame, template, frameLevel)
 	end
 end
 
--- ToDO: WoW10 => UpdateME => Credits: NDUI
+-- ToDO: DF => UpdateME => Credits: NDUI
 local sparkTexture = [[Interface\CastingBar\UI-CastingBar-Spark]]
 function S:HandleStepSlider(frame, minimal)
 	assert(frame, 'doesnt exist!')
@@ -1344,7 +1379,7 @@ do
 
 				local quality = portrait.quality or (follower.info and follower.info.quality)
 				local color = portrait.backdrop and ITEM_QUALITY_COLORS[quality]
-				if color then -- sometimes it doesn't have this data since WoW10
+				if color then -- sometimes it doesn't have this data since DF
 					portrait.backdrop:SetBackdropBorderColor(color.r, color.g, color.b)
 				end
 			end
@@ -1392,7 +1427,7 @@ do
 		if _G.GarrisonFollowerList_InitButton then
 			hooksecurefunc(_G, 'GarrisonFollowerList_InitButton', UpdateFollower)
 		else
-			hooksecurefunc(_G[frame], 'UpdateData', UpdateListScroll) -- pre WoW10
+			hooksecurefunc(_G[frame], 'UpdateData', UpdateListScroll) -- pre DF
 		end
 	end
 end
