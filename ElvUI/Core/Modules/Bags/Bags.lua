@@ -3,13 +3,12 @@ local B = E:GetModule('Bags')
 local TT = E:GetModule('Tooltip')
 local Skins = E:GetModule('Skins')
 local AB = E:GetModule('ActionBars')
-local Search = E.Libs.ItemSearch
 local LSM = E.Libs.LSM
 
 local _G = _G
-local type, ipairs, unpack, select, pcall = type, ipairs, unpack, select, pcall
-local strmatch, tinsert, tremove, wipe = strmatch, tinsert, tremove, wipe
-local next, max, floor, format, sub = next, max, floor, format, strsub
+local tinsert, tremove, wipe = tinsert, tremove, wipe
+local type, ipairs, unpack, select = type, ipairs, unpack, select
+local next, max, floor, format, strsub = next, max, floor, format, strsub
 
 local BreakUpLargeNumbers = BreakUpLargeNumbers
 local CreateFrame = CreateFrame
@@ -32,6 +31,7 @@ local IsCosmeticItem = IsCosmeticItem
 local IsInventoryItemProfessionBag = IsInventoryItemProfessionBag
 local IsReagentBankUnlocked = IsReagentBankUnlocked
 local PlaySound = PlaySound
+local PickupBagFromSlot = PickupBagFromSlot
 local PutItemInBackpack = PutItemInBackpack
 local PutItemInBag = PutItemInBag
 local PutKeyInKeyRing = PutKeyInKeyRing
@@ -49,7 +49,6 @@ local SplitContainerItem = SplitContainerItem
 local StaticPopup_Show = StaticPopup_Show
 local ToggleFrame = ToggleFrame
 local UnitAffectingCombat = UnitAffectingCombat
-local UseContainerItem = UseContainerItem
 
 local IsBagOpen, IsOptionFrameOpen = IsBagOpen, IsOptionFrameOpen
 local IsShiftKeyDown, IsControlKeyDown = IsShiftKeyDown, IsControlKeyDown
@@ -66,6 +65,7 @@ local C_NewItems_IsNewItem = C_NewItems.IsNewItem
 local C_NewItems_RemoveNewItem = C_NewItems.RemoveNewItem
 local C_Item_IsBound = C_Item.IsBound
 
+local SetItemSearch = SetItemSearch or (C_Container and C_Container.SetItemSearch)
 local GetBagSlotFlag = GetBagSlotFlag or (C_Container and C_Container.GetBagSlotFlag)
 local SetBagSlotFlag = SetBagSlotFlag or (C_Container and C_Container.SetBagSlotFlag)
 local GetBankBagSlotFlag = GetBankBagSlotFlag or (C_Container and C_Container.GetBankBagSlotFlag)
@@ -78,6 +78,7 @@ local GetContainerNumFreeSlots = GetContainerNumFreeSlots or (C_Container and C_
 local GetContainerNumSlots = GetContainerNumSlots or (C_Container and C_Container.GetContainerNumSlots)
 local SetBackpackAutosortDisabled = SetBackpackAutosortDisabled or (C_Container and C_Container.SetBackpackAutosortDisabled)
 local SetInsertItemsLeftToRight = SetInsertItemsLeftToRight or (C_Container and C_Container.SetInsertItemsLeftToRight)
+local UseContainerItem = UseContainerItem or (C_Container and C_Container.UseContainerItem)
 
 local CONTAINER_OFFSET_X, CONTAINER_OFFSET_Y = CONTAINER_OFFSET_X, CONTAINER_OFFSET_Y
 local IG_BACKPACK_CLOSE = SOUNDKIT.IG_BACKPACK_CLOSE
@@ -142,7 +143,7 @@ do
 			info.iconFileID, info.stackCount, info.isLocked, info.quality, info.isReadable, info.hasLoot, info.hyperlink, info.isFiltered, info.hasNoValue, info.itemID, info.isBound = GetContainerItemInfo(containerIndex, slotIndex)
 			return info
 		else
-			return GetContainerItemInfo(containerIndex, slotIndex)
+			return GetContainerItemInfo(containerIndex, slotIndex) or {}
 		end
 	end
 
@@ -166,8 +167,6 @@ local VISIBLE_CONTAINER_SPACING = 3
 local CONTAINER_SCALE = 0.75
 local BIND_START, BIND_END
 
-local SEARCH_STRING = ''
-B.SearchSlots = {}
 B.QuestSlots = {}
 B.ItemLevelSlots = {}
 B.BAG_FILTER_ICONS = {}
@@ -241,6 +240,7 @@ local bagEvents = {'BAG_UPDATE_DELAYED', 'BAG_UPDATE', 'BAG_CLOSED', 'ITEM_LOCK_
 local presistentEvents = {
 	PLAYERREAGENTBANKSLOTS_CHANGED = true,
 	PLAYERBANKSLOTS_CHANGED = true,
+	BAG_CONTAINER_UPDATE = true,
 	BAG_UPDATE_DELAYED = true,
 	BAG_UPDATE = true,
 	BAG_CLOSED = true
@@ -253,6 +253,8 @@ for bankID = bankOffset + 1, maxBankSlots do
 end
 
 if E.Retail then
+	tinsert(bagEvents, 'BAG_CONTAINER_UPDATE')
+	tinsert(bankEvents, 'BAG_CONTAINER_UPDATE')
 	tinsert(bankEvents, 'PLAYERREAGENTBANKSLOTS_CHANGED')
 	tinsert(bagIDs, 5)
 else
@@ -318,105 +320,48 @@ do
 	end
 end
 
-function B:SearchReset(skip)
-	SEARCH_STRING = ''
-
-	if skip then
-		B:RefreshSearch()
-	end
-end
-
-function B:IsSearching()
-	return SEARCH_STRING ~= ''
-end
-
-function B:UpdateSearch()
-	if self.skipUpdate then
-		self.skipUpdate = nil
-		return
-	end
-
-	local search = self:GetText()
-	if self.Instructions then
-		self.Instructions:SetShown(search == '')
-	end
-
+do
 	local MIN_REPEAT_CHARACTERS = 3
-	if #search > MIN_REPEAT_CHARACTERS then
-		local repeatChar = true
-		for i = 1, MIN_REPEAT_CHARACTERS, 1 do
-			local x, y = 0-i, -1-i
-			if sub(search, x, x) ~= sub(search, y, y) then
-				repeatChar = false
-				break
+	function B:SearchUpdate()
+		local search = self:GetText()
+		if self.Instructions then
+			self.Instructions:SetShown(search == '')
+		end
+
+		if #search > MIN_REPEAT_CHARACTERS then
+			local repeating = true
+			for i = 1, MIN_REPEAT_CHARACTERS, 1 do
+				local x, y = 0-i, -1-i
+				if strsub(search, x, x) ~= strsub(search, y, y) then
+					repeating = false
+					break
+				end
+			end
+
+			if repeating then
+				B:SearchClear()
+				return
 			end
 		end
 
-		if repeatChar then
-			B:ResetAndClear()
-			return
-		end
+		SetItemSearch(search)
 	end
-
-	SEARCH_STRING = search
-
-	B:RefreshSearch()
 end
 
-function B:ResetAndClear()
+function B:SearchRefresh()
+	local text = B.BagFrame.editBox:GetText()
+
+	B:SearchClear()
+
+	B.BagFrame.editBox:SetText(text)
+end
+
+function B:SearchClear()
 	B.BagFrame.editBox:SetText('')
 	B.BagFrame.editBox:ClearFocus()
 
 	B.BankFrame.editBox:SetText('')
 	B.BankFrame.editBox:ClearFocus()
-
-	-- pass bool to say whether it was from a script,
-	-- as this only needs to update from the scripts
-	B:SearchReset(self == B)
-end
-
-function B:SearchSlotUpdate(slot, link, locked)
-	B.SearchSlots[slot] = link
-
-	if slot.bagFrame.sortingSlots then return end -- dont update while sorting
-
-	if link and not locked and B:IsSearching() then
-		B:SearchSlot(slot)
-	else
-		slot.searchOverlay:SetShown(false)
-	end
-end
-
-function B:SearchSlot(slot)
-	local link = B.SearchSlots[slot]
-	if not link then return end
-
-	local keyword = Search.Filters.tipPhrases.keywords[SEARCH_STRING]
-	local method = (keyword and Search.TooltipPhrase) or Search.Matches
-	local query = keyword or SEARCH_STRING
-
-	if strmatch(query, '^%s+$') then
-		slot.searchOverlay:SetShown(false)
-	else
-		local success, result = pcall(method, Search, link, query)
-		slot.searchOverlay:SetShown(not (success and result))
-	end
-end
-
-function B:SetSearch(query)
-	local keyword = Search.Filters.tipPhrases.keywords[query]
-	local method = (keyword and Search.TooltipPhrase) or Search.Matches
-	if keyword then query = keyword end
-
-	local empty = strmatch(query, '^%s+$')
-	for slot, link in next, B.SearchSlots do
-		if empty then
-			slot.searchOverlay:SetShown(false)
-		else
-			local success, result = pcall(method, Search, link, query)
-			slot.searchOverlay:SetShown(not (success and result))
-		end
-	end
 end
 
 function B:UpdateItemDisplay()
@@ -572,7 +517,7 @@ function B:UpdateSlotColors(slot, isQuestItem, questId, isActiveQuest)
 		local bag = slot.bagFrame.Bags[slot.BagID]
 		local colors = bag and ((B.db.specialtyColors and B.ProfessionColors[bag.type]) or (B.db.showAssignedColor and B.AssignmentColors[bag.assigned]))
 		if colors then
-			r, g, b, a = unpack(colors)
+			r, g, b, a = colors.r, colors.g, colors.b, colors.a
 		end
 	end
 
@@ -636,9 +581,9 @@ function B:UpdateSlot(frame, bagID, slotID)
 	if not slot then return end
 
 	local keyring = not E.Retail and (bagID == KEYRING_CONTAINER)
-	local info = B:GetContainerItemInfo(bagID, slotID) or {}
+	local info = B:GetContainerItemInfo(bagID, slotID)
 
-	slot.name, slot.spellID, slot.itemID, slot.rarity, slot.locked, slot.readable, slot.itemLink = nil, nil, info.itemID, info.quality, info.isLocked, info.isReadable, info.hyperlink
+	slot.name, slot.spellID, slot.itemID, slot.rarity, slot.locked, slot.readable, slot.itemLink, slot.isBound = nil, nil, info.itemID, info.quality, info.isLocked, info.isReadable, info.hyperlink, info.isBound
 	slot.isJunk = (slot.rarity and slot.rarity == ITEMQUALITY_POOR) and not info.hasNoValue
 	slot.isEquipment, slot.junkDesaturate = nil, slot.isJunk and B.db.junkDesaturate
 	slot.hasItem = (info.iconFileID and 1) or nil -- used for ShowInspectCursor
@@ -658,8 +603,6 @@ function B:UpdateSlot(frame, bagID, slotID)
 	end
 
 	local isQuestItem, questId, isActiveQuest
-	B:SearchSlotUpdate(slot, slot.itemLink, slot.locked)
-
 	if slot.itemLink then
 		local _, spellID = GetItemSpell(slot.itemLink)
 		local name, _, _, _, _, _, _, _, itemEquipLoc, _, _, itemClassID, itemSubClassID, bindType = GetItemInfo(slot.itemLink)
@@ -682,6 +625,12 @@ function B:UpdateSlot(frame, bagID, slotID)
 		if mult then
 			slot.centerText:SetText(mult * info.stackCount)
 		end
+
+		slot:RegisterEvent('INVENTORY_SEARCH_UPDATE')
+		slot.searchOverlay:SetShown(info.isFiltered)
+	else
+		slot:UnregisterEvent('INVENTORY_SEARCH_UPDATE')
+		slot.searchOverlay:SetShown(false)
 	end
 
 	if slot.spellID then
@@ -735,10 +684,6 @@ function B:UpdateBagSlots(frame, bagID)
 	end
 end
 
-function B:RefreshSearch()
-	B:SetSearch(SEARCH_STRING)
-end
-
 function B:SortingFadeBags(bagFrame, sortingSlots)
 	if not (bagFrame and bagFrame.BagIDs) then return end
 	bagFrame.sortingSlots = sortingSlots
@@ -754,6 +699,11 @@ end
 function B:Slot_OnEvent(event)
 	if event == 'SPELL_UPDATE_COOLDOWN' then
 		B:UpdateCooldown(self)
+	elseif event == 'INVENTORY_SEARCH_UPDATE' then
+		if self.BagID and self.SlotID then
+			local info = B:GetContainerItemInfo(self.BagID, self.SlotID)
+			self.searchOverlay:SetShown(info.isFiltered)
+		end
 	end
 end
 
@@ -767,6 +717,14 @@ function B:Slot_OnEnter()
 end
 
 function B:Slot_OnLeave() end
+
+function B:Holder_OnReceiveDrag()
+	PutItemInBag(self.isBank and self:GetInventorySlot() or self:GetID())
+end
+
+function B:Holder_OnDragStart()
+	PickupBagFromSlot(self.isBank and self:GetInventorySlot() or self:GetID())
+end
 
 function B:Holder_OnClick(button)
 	if self.BagID == BACKPACK_CONTAINER then
@@ -925,9 +883,8 @@ function B:GetBagAssignedInfo(holder, isBank)
 	end
 
 	if active and color then
-		local r, g, b, a = unpack(color)
-		holder:SetBackdropBorderColor(r, g, b, a)
-		holder.forcedBorderColors = {r, g, b, a}
+		holder:SetBackdropBorderColor(color.r, color.g, color.b, color.a)
+		holder.forcedBorderColors = {color.r, color.g, color.b, color.a}
 
 		return active
 	else
@@ -1262,6 +1219,8 @@ function B:OnEvent(event, ...)
 				bag.staleSlots[slotID] = true
 			end
 		end
+	elseif event == 'BAG_CONTAINER_UPDATE' then
+		B:UpdateContainerIcons()
 	elseif event == 'BAG_UPDATE' or event == 'BAG_CLOSED' then
 		if not self.isBank or self:IsShown() then
 			B:DelayedContainer(self, event, ...)
@@ -1378,7 +1337,7 @@ function B:GetGrays(vendor)
 	for bagID = 0, 4 do
 		for slotID = 1, B:GetContainerNumSlots(bagID) do
 			local info = B:GetContainerItemInfo(bagID, slotID)
-			local itemLink = info and info.hyperlink
+			local itemLink = info.hyperlink
 			if itemLink and not info.hasNoValue and not B.ExcludeGrays[info.itemID] then
 				local _, _, rarity, _, _, _, _, _, _, _, itemPrice, classID, _, bindType = GetItemInfo(itemLink)
 
@@ -1487,6 +1446,21 @@ function B:ToggleBag(holder)
 	holder.shownIcon:SetTexture(B.db.shownBags[slotID] and _G.READY_CHECK_READY_TEXTURE or _G.READY_CHECK_NOT_READY_TEXTURE)
 
 	B:Layout(holder.isBank)
+end
+
+function B:UpdateContainerIcons()
+	if not B.BagFrame then return end
+
+	-- this only executes for the main bag, the bank bag doesn't use this
+	for bagID, holder in next, B.BagFrame.ContainerHolderByBagID do
+		B:UpdateContainerIcon(holder, bagID)
+	end
+end
+
+function B:UpdateContainerIcon(holder, bagID)
+	if not holder or not bagID or bagID == BACKPACK_CONTAINER or bagID == KEYRING_CONTAINER then return end
+
+	holder.icon:SetTexture(GetInventoryItemTexture('player', ContainerIDToInventoryID(bagID)) or 136511)
 end
 
 function B:ConstructContainerFrame(name, isBank)
@@ -1604,19 +1578,20 @@ function B:ConstructContainerFrame(name, isBank)
 			holder:SetScript('OnReceiveDrag', PutItemInBackpack)
 		elseif bagID == KEYRING_CONTAINER then
 			holder:SetScript('OnReceiveDrag', PutKeyInKeyRing)
-		elseif isBank then
-			holder:SetID(i == 1 and BANK_CONTAINER or (bagID - bankOffset))
-			holder:RegisterEvent('PLAYERBANKSLOTS_CHANGED')
-			holder:SetScript('OnEvent', BankFrameItemButton_UpdateLocked)
 		else
-			local id, icon = 5, 136511
-			if bagID ~= 5 then
-				id = GetInventorySlotInfo(format('Bag%dSlot', bagID-1))
-				icon = GetInventoryItemTexture('player', ContainerIDToInventoryID(bagID))
-			end
+			holder:RegisterForDrag('LeftButton')
+			holder:SetScript('OnDragStart', B.Holder_OnDragStart)
+			holder:SetScript('OnReceiveDrag', B.Holder_OnReceiveDrag)
 
-			holder:SetID(id)
-			holder.icon:SetTexture(icon)
+			if isBank then
+				holder:SetID(i == 1 and BANK_CONTAINER or (bagID - bankOffset))
+				holder:RegisterEvent('PLAYERBANKSLOTS_CHANGED')
+				holder:SetScript('OnEvent', BankFrameItemButton_UpdateLocked)
+			else
+				holder:SetID(bagID == 5 and 5 or GetInventorySlotInfo(format('Bag%dSlot', bagID-1)))
+
+				B:UpdateContainerIcon(holder, bagID)
+			end
 		end
 
 		if i == 1 then
@@ -1687,19 +1662,18 @@ function B:ConstructContainerFrame(name, isBank)
 
 	--Search
 	f.editBox = CreateFrame('EditBox', name..'EditBox', f, 'SearchBoxTemplate')
+	f.editBox:CreateBackdrop()
 	f.editBox:FontTemplate()
-	f.editBox:SetFrameLevel(f.editBox:GetFrameLevel() + 2)
+	f.editBox:Height(16)
 	f.editBox.Left:SetTexture()
 	f.editBox.Middle:SetTexture()
 	f.editBox.Right:SetTexture()
-	f.editBox:CreateBackdrop()
-	f.editBox:Height(16)
 	f.editBox:SetAutoFocus(false)
-	f.editBox:HookScript('OnTextChanged', B.UpdateSearch)
-	f.editBox:SetScript('OnEscapePressed', B.ResetAndClear)
+	f.editBox:SetFrameLevel(f.editBox:GetFrameLevel() + 2)
 	f.editBox:SetScript('OnEditFocusGained', EditBox_HighlightText)
-	f.editBox.clearButton:HookScript('OnClick', B.ResetAndClear)
-	f.editBox.skipUpdate = true -- we need to skip the first set of '' from bank
+	f.editBox:HookScript('OnTextChanged', B.SearchUpdate)
+	f.editBox:SetScript('OnEscapePressed', B.SearchClear)
+	f.editBox.clearButton:HookScript('OnClick', B.SearchClear)
 
 	if isBank then
 		f.notPurchased = {}
@@ -2140,24 +2114,18 @@ function B:ContainerOnHide()
 	B:BagFrameHidden(self)
 	B:HideItemGlow(self)
 
-	local bankSearching = B.BankFrame.editBox:GetText() ~= ''
 	if self.isBank then
 		CloseBankFrame()
-
-		if bankSearching then
-			self.editBox.skipUpdate = true -- skip the update from SetText in ResetAndClear
-			B:ResetAndClear()
-		end
 	else
 		CloseBackpack()
 
 		for i = 1, NUM_BAG_FRAMES do
 			CloseBag(i)
 		end
+	end
 
-		if not bankSearching and B.db.clearSearchOnClose then
-			B:ResetAndClear()
-		end
+	if B.db.clearSearchOnClose and (B.BankFrame.editBox:GetText() ~= '' or B.BagFrame.editBox:GetText() ~= '') then
+		B:SearchClear()
 	end
 end
 
@@ -2192,10 +2160,13 @@ function B:OpenBags()
 end
 
 function B:CloseBags()
-	B.BagFrame:Hide()
-	B.BankFrame:Hide()
+	local bag, bank = B.BagFrame:IsShown(), B.BankFrame:IsShown()
+	if bag or bank then
+		if bag then B.BagFrame:Hide() end
+		if bank then B.BankFrame:Hide() end
 
-	PlaySound(IG_BACKPACK_CLOSE)
+		PlaySound(IG_BACKPACK_CLOSE)
+	end
 
 	TT:GameTooltip_SetDefaultAnchor(GameTooltip)
 end
@@ -2232,8 +2203,6 @@ function B:ShowBankTab(f, showReagent)
 	else
 		B:UpdateLayout(f)
 	end
-
-	f.editBox.skipUpdate = true -- skip search update when switching tabs
 end
 
 function B:ItemGlowOnFinished()
@@ -2681,7 +2650,7 @@ function B:Initialize()
 	_G.UIDropDownMenu_Initialize(B.AssignBagDropdown, B.AssignBagFlagMenu, 'MENU')
 
 	B.AssignmentColors = {
-		[0] = { .99, .23, .21 }, -- fallback
+		[0] = { r = .99, g = .23, b = .21 }, -- fallback
 		[FILTER_FLAG_EQUIPMENT] = E:GetColorTable(B.db.colors.assignment.equipment),
 		[FILTER_FLAG_CONSUMABLES] = E:GetColorTable(B.db.colors.assignment.consumables),
 		[FILTER_FLAG_TRADE_GOODS] = E:GetColorTable(B.db.colors.assignment.tradegoods),

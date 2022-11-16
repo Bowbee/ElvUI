@@ -198,6 +198,10 @@ function M:LootRoll_Create(index)
 	button.stack:SetPoint('BOTTOMRIGHT', -1, 1)
 	button.stack:FontTemplate(nil, nil, 'OUTLINE')
 
+	button.ilvl = button:CreateFontString(nil, 'OVERLAY')
+	button.ilvl:SetPoint('BOTTOM', button, 'BOTTOM', 0, 0)
+	button.ilvl:FontTemplate(nil, nil, 'OUTLINE')
+
 	button.questIcon = button:CreateTexture(nil, 'OVERLAY')
 	button.questIcon:SetTexture(E.Media.Textures.BagQuestIcon)
 	button.questIcon:SetTexCoord(1, 0, 0, 1)
@@ -254,9 +258,11 @@ end
 
 function M:START_LOOT_ROLL(_, rollID, rollTime)
 	if cancelled_rolls[rollID] then return end
+	local db = E.db.general.lootRoll
+
 	local link = GetLootRollItemLink(rollID)
 	local texture, name, count, quality, bop, canNeed, canGreed, canDisenchant = GetLootRollItemInfo(rollID)
-	local _, _, _, _, _, _, _, _, _, _, _, itemClassID, _, bindType = GetItemInfo(link)
+	local _, _, _, itemLevel, _, _, _, _, _, _, _, itemClassID, _, bindType = GetItemInfo(link)
 	local color = ITEM_QUALITY_COLORS[quality]
 
 	local f = M:LootFrame_GetFrame()
@@ -271,6 +277,7 @@ function M:START_LOOT_ROLL(_, rollID, rollTime)
 	f.button.icon:SetTexture(texture)
 	f.button.stack:SetShown(count > 1)
 	f.button.stack:SetText(count)
+	f.button.ilvl:SetText(itemLevel)
 	f.button.questIcon:SetShown(B:GetItemQuestInfo(link, bindType, itemClassID))
 
 	f.need:SetEnabled(canNeed)
@@ -287,25 +294,31 @@ function M:START_LOOT_ROLL(_, rollID, rollTime)
 
 	f.name:SetText(name)
 
-	if E.db.general.lootRoll.qualityName then
+	if db.qualityName then
 		f.name:SetTextColor(color.r, color.g, color.b)
 	else
 		f.name:SetTextColor(1, 1, 1)
 	end
 
+	if db.qualityItemLevel then
+		f.button.ilvl:SetTextColor(color.r, color.g, color.b)
+	else
+		f.button.ilvl:SetTextColor(1, 1, 1)
+	end
+
 	f.bind:SetText(bop and L["BoP"] or bindType == 2 and L["BoE"] or bindType == 3 and L["BoU"])
 	f.bind:SetVertexColor(bop and 1 or .3, bop and .3 or 1, bop and .1 or .3)
 
-	if E.db.general.lootRoll.qualityStatusBar then
+	if db.qualityStatusBar then
 		f.status:SetStatusBarColor(color.r, color.g, color.b, .7)
 		f.status.spark:SetColorTexture(color.r, color.g, color.b, .9)
 	else
-		local c = E.db.general.lootRoll.statusBarColor
+		local c = db.statusBarColor
 		f.status:SetStatusBarColor(c.r, c.g, c.b, .7)
 		f.status.spark:SetColorTexture(c.r, c.g, c.b, .9)
 	end
 
-	if E.db.general.lootRoll.qualityStatusBarBackdrop then
+	if db.qualityStatusBarBackdrop then
 		f.status.backdrop:SetBackdropColor(color.r, color.g, color.b, .1)
 	else
 		local r, g, b = unpack(E.media.backdropfadecolor)

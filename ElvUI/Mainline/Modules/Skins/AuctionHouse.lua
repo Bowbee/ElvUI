@@ -189,8 +189,8 @@ local function HandleSellList(frame, hasHeader, fitScrollBar)
 
 	if fitScrollBar then
 		frame.ScrollBar:ClearAllPoints()
-		frame.ScrollBar:Point('TOPLEFT', frame, 'TOPRIGHT', 1, -16)
-		frame.ScrollBar:Point('BOTTOMLEFT', frame, 'BOTTOMRIGHT', 1, 16)
+		frame.ScrollBar:Point('TOPRIGHT', frame, 1, -16)
+		frame.ScrollBar:Point('BOTTOMRIGHT', frame, 1, 16)
 	end
 
 	if hasHeader then
@@ -246,7 +246,8 @@ local function LoadSkin()
 	--[[ Categorie List ]]--
 	local Categories = Frame.CategoriesList
 	Categories:StripTextures()
-	Categories:SetTemplate('Transparent')
+	Categories.NineSlice:SetTemplate('Transparent')
+	Categories.NineSlice:SetInside(Categories)
 	S:HandleTrimScrollBar(Categories.ScrollBar)
 
 	hooksecurefunc('AuctionHouseFilterButton_SetUp', function(button)
@@ -265,8 +266,8 @@ local function LoadSkin()
 	S:HandleTrimScrollBar(BrowseList.ScrollBar)
 	BrowseList:SetTemplate('Transparent')
 	BrowseList.ScrollBar:ClearAllPoints()
-	BrowseList.ScrollBar:Point('TOPLEFT', BrowseList, 'TOPRIGHT', 1, -16)
-	BrowseList.ScrollBar:Point('BOTTOMLEFT', BrowseList, 'BOTTOMRIGHT', 1, 16)
+	BrowseList.ScrollBar:Point('TOPRIGHT', BrowseList, 1, -16)
+	BrowseList.ScrollBar:Point('BOTTOMRIGHT', BrowseList, 1, 16)
 
 	--[[ BuyOut Frame]]
 	local CommoditiesBuyFrame = Frame.CommoditiesBuyFrame
