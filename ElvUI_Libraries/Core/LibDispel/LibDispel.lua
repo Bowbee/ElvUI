@@ -84,7 +84,7 @@ do
 		elseif myClass == 'PRIEST' then
 			local dispel = CheckSpell(527) -- Dispel Magic
 			DispelList.Magic = dispel or CheckSpell(32375)
-			DispelList.Disease = Retail and (dispel or CheckSpell(213634)) or not Retail and (CheckSpell(552) or CheckSpell(528)) -- Purify Disease / Abolish Disease / Cure Disease
+			DispelList.Disease = Retail and ((dispel and CheckSpell(390632)) or CheckSpell(213634)) or not Retail and (CheckSpell(552) or CheckSpell(528)) -- Purify Disease / Abolish Disease / Cure Disease
 		elseif myClass == 'SHAMAN' then
 			local purify = Retail and CheckSpell(77130) -- Purify Spirit
 			local cleanse = purify or CheckSpell(51886) -- Cleanse Spirit
@@ -97,9 +97,12 @@ do
 		elseif myClass == 'EVOKER' then
 			local naturalize = CheckSpell(360823) -- Naturalize (Preservation)
 			local expunge = CheckSpell(365585) -- Expunge (Devastation)
+			local cauterizing = CheckSpell(374251) -- Cauterizing Flame (Still need bleed support.)
 
 			DispelList.Magic = naturalize
-			DispelList.Poison = naturalize or expunge
+			DispelList.Poison = naturalize or expunge or cauterizing
+			DispelList.Disease = cauterizing
+			DispelList.Curse = cauterizing
 		end
 
 		if undoRanks then
@@ -121,6 +124,6 @@ do
 	end
 
 	if Retail then
-		frame:RegisterEvent('PLAYER_SPECIALIZATION_CHANGED')
+		frame:RegisterUnitEvent('PLAYER_SPECIALIZATION_CHANGED', 'player')
 	end
 end
