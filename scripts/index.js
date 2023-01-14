@@ -62,14 +62,6 @@ addFormatLines.forEach((func, index) => {
 const nameLine = "z['Elv-Spirestone']";
 const nameLineIndex = getIndexOfLine(nameLine);
 const characters = {
-  "Bowbi-Frostmourne": "veilOrange",
-  "Demobalth-Frostmourne": "veilBlue",
-  "Mogybear-Frostmourne": "veilBlue",
-  "Meeooww-Frostmourne": "veilPink",
-  "Obimage-Frostmourne": "veilObi",
-  "Obidk-Frostmourne": "veilObi",
-  "Embattled-Frostmourne": "itsThradex",
-  "TorxyPriest-Frostmourne": "itsThradex",
 }
 Object.keys(characters).forEach((key, index) => {
   const line = `    z['${key}'] = ${characters[key]}`;
