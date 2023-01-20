@@ -284,7 +284,7 @@ do --this can save some main file locals
 		(a = a - (b and 1 or -1) if (b and a == 1 or a == 0) or a == #c then b = not b end return c[a])
 	]]
 
-	local itsElv, itsMis, itsSimpy, itsMel, itsThradex
+	local itsElv, itsMis, itsSimpy, itsMel, itsThradex, itsPooc
 	do	--Simpy Chaos: super cute text coloring function that ignores hyperlinks and keywords
 		local e, f, g = {'||','|Helvmoji:.-|h.-|h','|[Cc].-|[Rr]','|[TA].-|[ta]','|H.-|h.-|h'}, {}, {}
 		local prettify = function(t,...) return gsub(gsub(E:TextGradient(gsub(gsub(t,'%%%%','\27'),'\124\124','\26'),...),'\27','%%%%'),'\26','||') end
@@ -293,22 +293,25 @@ do --this can save some main file locals
 			if next(g) then if #g > 1 then sort(g) end for n in gmatch(t, '\24') do local _, v = next(g) t = gsub(t, n, f[v], 1) tremove(g, 1) f[v] = nil end end return t
 		end
 
-		--Simpys: original rainbow
-		local SimpyColors = function(t) return specialText(t, 0.99,0.24,0.26, 0.99,0.59,0.28, 1,0.87,0.29, 0.42,0.99,0.39, 0.32,0.76,0.98, 0.63,0.36,0.98, 0.77,0.47,0.98) end
+		--Simpys: Spring Green (2EFF7E), Vivid Sky Blue (52D9FF), Medium Purple (8D63DB), Ticke Me Pink (FF8EB6), Yellow Orange (FFAF53)
+		local SimpyColors = function(t) return specialText(t, 0.18,1.00,0.49, 0.32,0.85,1.00, 0.55,0.38,0.85, 1.00,0.55,0.71, 1.00,0.68,0.32) end
 		--Detroit Lions: Honolulu Blue to Silver [Elv: I stoles it @Simpy]
 		local ElvColors = function(t) return specialText(t, 0,0.42,0.69, 0.61,0.61,0.61) end
 		--Rainbow: FD3E44, FE9849, FFDE4B, 6DFD65, 54C4FC, A35DFA, C679FB, FE81C1
 		local MisColors = function(t) return specialText(t, 0.99,0.24,0.26, 0.99,0.59,0.28, 1,0.87,0.29, 0.42,0.99,0.39, 0.32,0.76,0.98, 0.63,0.36,0.98, 0.77,0.47,0.98, 0.99,0.5,0.75) end
-		--Mels: fiery rose (f94f6d), saffron (f7c621), emerald (4fc16d), medium slate blue (7c7af7), cyan process (11afea)
+		--Mels: Fiery Rose (F94F6D), Saffron (F7C621), Emerald (4FC16D), Medium Slate Blue (7C7AF7), Cyan Process (11AFEA)
 		local MelColors = function(t) return specialText(t, 0.98,0.31,0.43, 0.97,0.78,0.13, 0.31,0.76,0.43, 0.49,0.48,0.97, 0.07,0.69,0.92) end
 		--Thradex: summer without you
 		local ThradexColors = function(t) return specialText(t, 0.00,0.60,0.09, 0.22,0.65,0.90, 0.22,0.65,0.90, 1.00,0.74,0.27, 1.00,0.66,0.00, 1.00,0.50,0.20, 0.92,0.31,0.23) end
+		--Repooc: Monk, Demon Hunter, Paladin, Warlock colors
+		local PoocsColors = function(t) return specialText(t, 0,1,0.6, 0.64,0.19,0.79, 0.96,0.55,0.73, 0.53,0.53,0.93) end
 
 		itsSimpy = function() return ElvSimpy, SimpyColors end
 		itsElv = function() return ElvBlue, ElvColors end
 		itsMel = function() return Hibiscus, MelColors end
 		itsMis = function() return Rainbow, MisColors end
 		itsThradex = function() return PalmTree, ThradexColors end
+		itsPooc = function() return ElvBlue, PoocsColors end
 	end
 
 	local z = {}
@@ -379,12 +382,12 @@ do --this can save some main file locals
 		z['Unluckyone-LaughingSkull']	= ElvRed -- [Horde] Shaman
 		z['Luckydruid-LaughingSkull']	= ElvRed -- [Alliance] Druid
 		-- Repooc
-		z['Sifpooc-Stormrage']			= ElvBlue	-- DH
-		z['Fragmented-Stormrage']		= ElvBlue	-- Warlock
-		z['Dapooc-Stormrage']			= ElvOrange	-- Druid
-		z['Poocvoker-Stormrage']		= ElvGreen	-- Evoker
-		z['Sifupooc-Spirestone']		= ElvBlue	-- Monk
-		z['Repooc-Spirestone']			= ElvBlue	-- Paladin
+		z['Sifpooc-Stormrage']			= itsPooc	-- DH
+		z['Fragmented-Stormrage']		= itsPooc	-- Warlock
+		z['Dapooc-Stormrage']			= itsPooc	-- Druid
+		z['Poocvoker-Stormrage']		= itsPooc	-- Evoker
+		z['Sifupooc-Spirestone']		= itsPooc	-- Monk
+		z['Repooc-Spirestone']			= itsPooc	-- Paladin
 		-- Simpy
 		z['Arieva-Cenarius']			= itsSimpy -- Hunter
 		z['Buddercup-Cenarius']			= itsSimpy -- Rogue
@@ -437,7 +440,14 @@ do --this can save some main file locals
 		z['Alysneaks-Cenarius']		= itsMel -- [Horde] Rogue
 		z['Alytotes-Cenarius']		= itsMel -- [Horde] Shaman
 		-- Thradex (Simpys Buddy)
-		z['Foam-Area52']			= itsThradex
+		z['Foam-Area52']			= itsThradex -- Horde
+		z['Gur-Area52']				= itsThradex -- Horde
+		z['Archmage-Area52']		= itsThradex -- Horde
+		z['Counselor-Area52']		= itsThradex -- Horde
+		z['Monk-CenarionCircle']	= itsThradex
+		z['Thradex-Stormrage']		= itsThradex
+		z['Wrecked-Stormrage']		= itsThradex
+		z['Tb-Stormrage']			= itsThradex
 		-- AcidWeb
 		z['Livarax-BurningLegion']		= Gem
 		z['Filevandrel-BurningLegion']	= Gem
@@ -460,13 +470,13 @@ do --this can save some main file locals
 		z['Twunkie-Area52']			= itsMis
 		z['Misoracle-Area52']		= itsMis
 		z['Mismayhem-Area52']		= itsMis
-		z['Misdîrect-Spirestone']	= itsMis
+		z['Misdîrect-Area52']		= itsMis
+		z['Misdecay-Area52']		= itsMis
+		z['Mislust-Area52'] 		= itsMis
+		z['Misdivine-Area52']		= itsMis
+		z['Mislight-Area52']		= itsMis
 		z['Misillidan-Spirestone']	= itsMis
 		z['Mispel-Spirestone']		= itsMis
-		z['Misdecay-Spirestone']	= itsMis
-		z['Mislust-Spirestone'] 	= itsMis
-		z['Misdivine-Spirestone']	= itsMis
-		z['Mislight-Spirestone']	= itsMis
 		--Bladesdruid
 		z['Bladedemonz-Spirestone']	= SuperBear
 		z['Bladesdruid-Spirestone']	= SuperBear
@@ -1388,7 +1398,7 @@ function CH:UpdateChatTabColors()
 		CH:FCFTab_UpdateColors(tab, tab.selected)
 	end
 end
-E.valueColorUpdateFuncs[CH.UpdateChatTabColors] = true
+E.valueColorUpdateFuncs.Chat = CH.UpdateChatTabColors
 
 function CH:ScrollToBottom(frame)
 	frame:ScrollToBottom()
