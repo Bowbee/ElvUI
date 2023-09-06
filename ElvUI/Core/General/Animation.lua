@@ -4,6 +4,7 @@
 local E, L, V, P, G = unpack(ElvUI)
 
 local _G = _G
+local issecurevariable = issecurevariable
 local random, next, unpack, strsub = random, next, unpack, strsub
 
 E.AnimShake = {{-9,7,-7,12}, {-5,9,-9,5}, {-5,7,-7,5}, {-9,9,-9,9}, {-5,7,-7,5}, {-9,7,-9,5}}
@@ -28,7 +29,7 @@ E:SetUpAnimGroup(t, 'Number', 10, 5)
 local b = CreateFrame('BUTTON', nil, UIParent)
 b:Point('CENTER', 0, -100)
 b:SetTemplate()
-b:Size(40,30)
+b:Size(40, 30)
 b:EnableMouse(true)
 b:SetScript('OnClick', function()
 	if t:GetText() == 10 then
@@ -296,7 +297,7 @@ function E:UIFrameFade(frame, info)
 
 	frame:SetAlpha(info.startAlpha)
 
-	if not frame:IsProtected() then
+	if not frame:IsShown() and not frame:IsProtected() and not issecurevariable(frame, 'Show') then
 		frame:Show()
 	end
 
